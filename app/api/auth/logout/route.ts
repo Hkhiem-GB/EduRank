@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import connectToDatabase from "@/lib/mongodb";
-import { AuditLog } from "@/models";
+import { User, AuditLog } from "@/models";
 
 export async function POST(req: NextRequest) {
   try {
     const session = getAuthSession(req);
     if (session) {
       await connectToDatabase();
+      // Record logout timestamp in database to invalidate past sessions
+      if (session.userId) {
+        await User.findByIdAndUpdate(session.userId, {
+          lastLogoutAt: new Date(),
+        });
+      }
+
       await AuditLog.create({
         actorId: session.accountCode,
         actorName: session.fullName,
@@ -26,12 +33,14 @@ export async function POST(req: NextRequest) {
       message: "Đăng xuất thành công.",
     });
 
+    // Invalidate cookie immediately
     response.cookies.set("auth_token", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: 0,
+      expires: new Date(0),
     });
 
     return response;

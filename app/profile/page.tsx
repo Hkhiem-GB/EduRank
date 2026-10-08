@@ -52,12 +52,14 @@ export default function ProfilePage() {
 
   // Lookup teacher/student details for richer profile data
   const teacherDetails = useMemo(() => {
+    if (!currentUser) return undefined;
     return teachers.find((t) => t.teacherCode === currentUser.accountCode);
-  }, [teachers, currentUser.accountCode]);
+  }, [teachers, currentUser?.accountCode]);
 
   const studentDetails = useMemo(() => {
+    if (!currentUser) return undefined;
     return students.find((s) => s.studentCode === currentUser.accountCode);
-  }, [students, currentUser.accountCode]);
+  }, [students, currentUser?.accountCode]);
 
   // Derived profile fields with graceful fallbacks
   const phone = teacherDetails?.phone || "0912 345 678";
@@ -65,7 +67,7 @@ export default function ProfilePage() {
     teacherDetails?.email ||
     (activeRole === "STUDENT"
       ? "an.nguyen@hocsinh.thcsnasam.edu.vn"
-      : `${currentUser.accountCode.toLowerCase()}@thcsnasam.edu.vn`);
+      : `${currentUser?.accountCode ? currentUser.accountCode.toLowerCase() : "user"}@thcsnasam.edu.vn`);
 
   const dateOfBirth = useMemo(() => {
     if (studentDetails?.dateOfBirth) {
@@ -317,7 +319,7 @@ export default function ProfilePage() {
         const res = await uploadAvatarApi(file);
         if (res.success && res.avatarUrl) {
           setAvatarUrl(res.avatarUrl);
-          setCurrentUser((prev) => ({ ...prev, avatarUrl: res.avatarUrl }));
+          setCurrentUser((prev) => (prev ? { ...prev, avatarUrl: res.avatarUrl } : null));
           showToast("Cập nhật ảnh đại diện lên ImgBB thành công!", "success");
         } else {
           showToast(res.message || "Tải lên ảnh thất bại.", "error");
@@ -434,6 +436,17 @@ export default function ProfilePage() {
         );
     }
   };
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-slate-500 animate-pulse">
+          Đang tải thông tin cá nhân...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

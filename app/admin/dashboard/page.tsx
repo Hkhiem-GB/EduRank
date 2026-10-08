@@ -15,6 +15,7 @@ import { CompetitionRecordForm } from "@/components/competition/CompetitionRecor
 
 export default function AdminDashboardPage() {
   const {
+    currentUser,
     statistics,
     classRankings,
     studentRankings,
@@ -27,7 +28,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Page Header (Section 8.1 & 8.3) */}
       <PageHeader
-        greeting="Kính chào Ban Thi Đua & Quản Trị 👋"
+        greeting={`Kính chào ${currentUser?.fullName || "Ban Giám Hiệu"} 👋`}
         title="Bảng Điều Khiển Tổng Quan"
         description="Tổng quan hệ thống thi đua, nề nếp kỷ luật và xếp hạng 14 lớp học với 496 học sinh"
         actions={

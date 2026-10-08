@@ -162,12 +162,92 @@ function ArrowLeftIcon({ className = "w-4 h-4" }: { className?: string }) {
     </svg>
   );
 }
+
+function RecaptchaSymbol({ className = "w-8 h-8" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path
+        d="M32 6C17.64 6 6 17.64 6 32c0 6.64 2.48 12.72 6.57 17.37l6.35-6.35C16.35 39.88 15 36.12 15 32c0-9.39 7.61-17 17-17 4.12 0 7.88 1.35 11.02 3.92L48.37 13.57C43.72 9.48 37.64 6 32 6Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M58 32c0-6.64-2.48-12.72-6.57-17.37l-6.35 6.35C47.65 24.12 49 27.88 49 32c0 9.39-7.61 17-17 17-4.12 0-7.88-1.35-11.02-3.92l-5.35 5.35C20.28 54.52 26.36 58 32 58c14.36 0 26-11.64 26-26Z"
+        fill="#34A853"
+      />
+      <path
+        d="M32 49c-9.39 0-17-7.61-17-17 0-4.12 1.35-7.88 3.92-11.02l-5.35-5.35C9.48 20.28 6 26.36 6 32c0 14.36 11.64 26 26 26 5.64 0 11.72-2.48 16.37-6.57l-6.35-6.35C35.88 47.65 32.12 49 32 49Z"
+        fill="#FBBC05"
+      />
+    </svg>
+  );
+}
+
+function ShieldProtectionIcon({ className = "w-6 h-6" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
 import { AnimatedBackground } from "@/components/ui/AnimatedBackground";
 
 // ==================== MAIN LOGIN PAGE ====================
 export default function LoginPage() {
   const router = useRouter();
   const { switchRole, loginUser } = useApp();
+
+  // reCAPTCHA & Security Gate State
+  const [isCaptchaVerified, setIsCaptchaVerified] = useState<boolean>(false);
+  const [isCaptchaChecking, setIsCaptchaChecking] = useState<boolean>(false);
+  const [captchaStatusText, setCaptchaStatusText] = useState<string>("Bấm vào ô vuông để xác minh bạn là con người");
+
+  // Check if session already verified reCAPTCHA
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const verified = sessionStorage.getItem("edurank_captcha_verified");
+      if (verified === "true") {
+        setIsCaptchaVerified(true);
+      }
+    }
+  }, []);
+
+  const handleVerifyCaptcha = async () => {
+    if (isCaptchaChecking || isCaptchaVerified) return;
+    setIsCaptchaChecking(true);
+    setCaptchaStatusText("Đang phân tích chứng chỉ bảo mật và môi trường kết nối...");
+
+    try {
+      const res = await fetch("/api/auth/verify-captcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientTimestamp: Date.now(),
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success && data.verified) {
+        setCaptchaStatusText("✓ Đã xác minh an toàn thành công!");
+        setTimeout(() => {
+          setIsCaptchaVerified(true);
+          setIsCaptchaChecking(false);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("edurank_captcha_verified", "true");
+          }
+          showNotification("Xác thực an toàn thành công. Chào mừng bạn!", "success");
+        }, 600);
+      } else {
+        setIsCaptchaChecking(false);
+        setCaptchaStatusText("Xác thực thất bại. Vui lòng bấm thử lại.");
+        showNotification(data.message || "Xác thực không thành công. Vui lòng thử lại.", "error");
+      }
+    } catch (err: any) {
+      setIsCaptchaChecking(false);
+      setCaptchaStatusText("Lỗi mạng khi kiểm tra an ninh.");
+      showNotification("Lỗi kết nối khi xác thực. Vui lòng thử lại.", "error");
+    }
+  };
 
   // Screen State: null = Screen 1 (Chọn vai trò), "TEACHER" | "STUDENT" | "ADMIN" = Screen 2 (Điền thông tin)
   const [selectedRole, setSelectedRole] = useState<"TEACHER" | "STUDENT" | "ADMIN" | null>(null);
@@ -317,9 +397,111 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center p-2.5 sm:p-4 md:p-6 w-full max-w-5xl mx-auto my-auto relative z-10">
         <AnimatePresence mode="wait">
           {/* ============================================================ */}
-          {/* TRẠNG THÁI 1: MÀN HÌNH CHỌN VAI TRÒ (SCREEN 1)               */}
+          {/* BƯỚC 0: XÁC MINH AN NINH / RECAPTCHA (HIỂN THỊ ĐẦU TIÊN)     */}
           {/* ============================================================ */}
-          {!selectedRole ? (
+          {!isCaptchaVerified ? (
+            <motion.div
+              key="screen-captcha"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col items-center justify-center text-center w-full max-w-sm sm:max-w-md mx-auto py-6 px-4 sm:py-8 sm:px-8 rounded-2xl sm:rounded-3xl bg-white/95 backdrop-blur-md border border-white/80 shadow-2xl shadow-blue-900/10 relative z-10"
+            >
+              {/* Badge Shield Header */}
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 flex items-center justify-center mb-3">
+                <ShieldProtectionIcon className="w-8 h-8" />
+              </div>
+
+              <h1 className="text-lg sm:text-xl md:text-2xl font-black text-blue-950 tracking-tight uppercase">
+                TRƯỜNG THCS NA SẦM
+              </h1>
+              <p className="text-xs sm:text-sm font-bold text-blue-600 mt-0.5 tracking-wide uppercase">
+                Hệ Thống Xác Thực & Bảo Mật EduRank
+              </p>
+
+              <p className="text-xs text-slate-500 mt-2 mb-5 max-w-xs leading-relaxed">
+                Hệ thống yêu cầu xác minh an ninh để phòng chống tấn công tự động và bảo vệ tài khoản trước khi truy cập cổng đăng nhập.
+              </p>
+
+              {/* reCAPTCHA Box (Interactive Widget) */}
+              <div
+                onClick={handleVerifyCaptcha}
+                className={`w-full max-w-xs p-3.5 sm:p-4 rounded-xl border-2 transition-all select-none cursor-pointer flex items-center justify-between ${
+                  isCaptchaChecking
+                    ? "border-blue-400 bg-blue-50/70 shadow-md ring-2 ring-blue-400/20"
+                    : "border-slate-300 bg-slate-50/80 hover:border-blue-500 hover:bg-white hover:shadow-md"
+                }`}
+                title="Bấm vào để xác thực an toàn"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Checkbox Icon */}
+                  <div
+                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md border-2 flex items-center justify-center transition-all shrink-0 ${
+                      isCaptchaChecking
+                        ? "border-blue-500 bg-white"
+                        : "border-slate-400 bg-white hover:border-blue-600"
+                    }`}
+                  >
+                    {isCaptchaChecking ? (
+                      <svg
+                        className="animate-spin w-4 h-4 sm:w-5 sm:h-5 text-blue-600"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8H4z"
+                        />
+                      </svg>
+                    ) : null}
+                  </div>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 text-left">
+                    Tôi không phải là người máy
+                  </span>
+                </div>
+
+                {/* reCAPTCHA Brand Logo */}
+                <div className="flex flex-col items-center justify-center text-right pl-2 shrink-0">
+                  <RecaptchaSymbol className="w-7 h-7 sm:w-8 sm:h-8" />
+                  <span className="text-[9px] font-black tracking-tight text-slate-600 mt-0.5">
+                    reCAPTCHA
+                  </span>
+                  <span className="text-[8px] text-slate-400">
+                    Bảo mật · Điều khoản
+                  </span>
+                </div>
+              </div>
+
+              {/* Helper Status line */}
+              <p className="text-[11px] text-slate-500 mt-4 font-medium flex items-center justify-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{captchaStatusText}</span>
+              </p>
+
+              {/* Protection Badges Footer */}
+              <div className="mt-5 pt-3.5 border-t border-slate-100 w-full flex items-center justify-center gap-3 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                <span>🛡️ Rate Limit IP</span>
+                <span>·</span>
+                <span>🔒 Phiên 3 ngày</span>
+                <span>·</span>
+                <span>⚡ Anti-Bot</span>
+              </div>
+            </motion.div>
+          ) : !selectedRole ? (
+            /* ============================================================ */
+            /* TRẠNG THÁI 1: MÀN HÌNH CHỌN VAI TRÒ (SCREEN 1)               */
+            /* ============================================================ */
             <motion.div
               key="screen-1"
               initial={{ opacity: 0 }}

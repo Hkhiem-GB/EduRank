@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/AppContext";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CompetitionFilterBar } from "@/components/competition/CompetitionFilterBar";
@@ -15,9 +16,12 @@ import { CompetitionRecordForm } from "@/components/competition/CompetitionRecor
 import Link from "next/link";
 
 export default function HomePage() {
+  const router = useRouter();
   const {
     activeRole,
     currentUser,
+    isAuthenticated,
+    isAuthChecking,
     statistics,
     classRankings,
     studentRankings,
@@ -26,11 +30,29 @@ export default function HomePage() {
 
   const [isScoringModalOpen, setIsScoringModalOpen] = useState(false);
 
+  // Security guard: If user is not authenticated and check finished, redirect to /login immediately
+  useEffect(() => {
+    if (!isAuthChecking && !currentUser && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthChecking, currentUser, isAuthenticated, router]);
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-slate-500 animate-pulse">
+          Đang tải dữ liệu và xác thực phiên làm việc...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Page Header (Section 18) */}
       <PageHeader
-        greeting={`Xin chào, ${currentUser.fullName} 👋`}
+        greeting={`Xin chào, ${currentUser?.fullName || "Thành viên"} 👋`}
         title="Tổng Quan Thi Đua Toàn Trường"
         description="Theo dõi nề nếp, kỷ luật, thành tích học tập và phong trào thi đua trường THCS Na Sầm"
         badge={

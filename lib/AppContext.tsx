@@ -59,8 +59,10 @@ interface AppContextType {
   // Role & User
   activeRole: UserRole;
   switchRole: (role: UserRole) => void;
-  currentUser: HeaderUser;
-  setCurrentUser: React.Dispatch<React.SetStateAction<HeaderUser>>;
+  currentUser: HeaderUser | null;
+  setCurrentUser: React.Dispatch<React.SetStateAction<HeaderUser | null>>;
+  isAuthenticated: boolean;
+  isAuthChecking: boolean;
   loginUser: (accountCode: string, password: string, role?: UserRole) => Promise<boolean>;
   logoutUser: () => Promise<void>;
 
@@ -131,12 +133,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Active Role and Current User
   const [activeRole, setActiveRole] = useState<UserRole>("SUPER_ADMIN");
-  const [currentUser, setCurrentUser] = useState<HeaderUser>({
-    fullName: "Ban Giám Hiệu - Quản trị hệ thống",
-    accountCode: "ADMIN",
-    roles: ["SUPER_ADMIN", "ADMIN"],
-    avatarUrl: undefined,
-  });
+  const [currentUser, setCurrentUser] = useState<HeaderUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
 
   // State populated from MongoDB
   const [classes, setClasses] = useState<IClass[]>([]);
@@ -241,6 +240,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function init() {
       setIsLoading(true);
+      setIsAuthChecking(true);
       try {
         const meRes = await getMeApi();
         if (meRes.success && meRes.user) {
@@ -251,14 +251,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             roles: u.roles,
             avatarUrl: u.avatarUrl,
           });
+          setIsAuthenticated(true);
           if (u.roles && u.roles.length > 0) {
             setActiveRole(u.roles[0]);
           }
+          await refreshData();
+        } else {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
         }
       } catch (e) {
-        // Not logged in or guest
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       } finally {
-        await refreshData();
+        setIsAuthChecking(false);
         setIsLoading(false);
       }
     }
@@ -280,6 +286,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         roles: u.roles,
         avatarUrl: u.avatarUrl,
       });
+      setIsAuthenticated(true);
       setActiveRole(chosenRole);
       showToast(`Đăng nhập thành công! Chào mừng ${u.fullName} 👋`, "success");
       await refreshData();
@@ -295,9 +302,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Logout handler
   const logoutUser = async () => {
-    await logoutApi();
+    try {
+      await logoutApi();
+    } catch (e) {
+      console.error("Logout API call error:", e);
+    }
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    setActiveRole("STUDENT");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("edurank_captcha_verified");
+      localStorage.removeItem("edurank_session");
+    }
     showToast("Đã đăng xuất khỏi tài khoản.", "info");
-    router.push("/login");
+    router.replace("/login");
   };
 
   // Role switching
@@ -362,7 +380,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Action: Add Record
   const addCompetitionRecord = async (
     data: CompetitionRecordFormData,
-    actorName = currentUser.fullName
+    actorName = currentUser?.fullName || "Quản trị viên"
   ) => {
     const res = await recordCompetitionScoreApi(data);
     if (res.success) {
@@ -579,6 +597,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         switchRole,
         currentUser,
         setCurrentUser,
+        isAuthenticated,
+        isAuthChecking,
         loginUser,
         logoutUser,
         classes,

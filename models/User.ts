@@ -11,6 +11,7 @@ export interface IUserDocument extends Document {
   avatarUrl?: string;
   isActive: boolean;
   lastLoginAt?: Date;
+  lastLogoutAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +64,9 @@ const UserSchema = new Schema<IUserDocument>(
       index: true,
     },
     lastLoginAt: {
+      type: Date,
+    },
+    lastLogoutAt: {
       type: Date,
     },
   },

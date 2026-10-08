@@ -4,7 +4,8 @@ import { NextRequest } from "next/server";
 import { UserRole } from "@/types";
 
 const AUTH_SECRET = process.env.AUTH_SECRET || "edurank_super_secret_jwt_key_2026";
-const TOKEN_EXPIRY = "7d";
+export const TOKEN_EXPIRY = "3d";
+export const TOKEN_MAX_AGE_SECONDS = 3 * 24 * 60 * 60; // 3 days (259,200s)
 
 export interface AuthTokenPayload {
   userId: string;
@@ -14,6 +15,8 @@ export interface AuthTokenPayload {
   teacherId?: string;
   studentId?: string;
   avatarUrl?: string;
+  iat?: number;
+  exp?: number;
 }
 
 /**

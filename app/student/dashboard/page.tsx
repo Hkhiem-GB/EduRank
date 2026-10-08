@@ -24,7 +24,7 @@ export default function StudentDashboardPage() {
   } = useApp();
 
   // Find student by current account or fallback
-  const student = students.find((s) => s.studentCode === currentUser.accountCode) || students[0];
+  const student = students.find((s) => s.studentCode === currentUser?.accountCode) || students[0];
   const myClass = student ? classes.find((c) => c._id === student.classId) : classes[0];
   const myRanking = student ? studentRankings.find((r) => r.studentId === student._id) : undefined;
   const classRank = myClass ? classRankings.find((r) => r.classId === myClass._id) : undefined;
@@ -44,7 +44,7 @@ export default function StudentDashboardPage() {
     <div className="space-y-6">
       {/* Page Header (No scoring button for student) */}
       <PageHeader
-        greeting={`Xin chào, ${student?.fullName || currentUser.fullName} 👋`}
+        greeting={`Xin chào, ${student?.fullName || currentUser?.fullName || "Em"} 👋`}
         title="Bảng Theo Dõi Thi Đua Học Sinh"
         description={`Học sinh Lớp ${myClass?.className || ""} · Trường THCS Na Sầm · Năm học 2026–2027`}
         badge={

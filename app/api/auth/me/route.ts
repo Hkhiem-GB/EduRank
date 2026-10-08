@@ -17,12 +17,32 @@ export async function GET(req: NextRequest) {
 
     await connectToDatabase();
     const user = await User.findById(session.userId);
-
     if (!user || !user.isActive) {
       return NextResponse.json(
         { success: false, message: "Tài khoản không tồn tại hoặc đã bị khóa." },
         { status: 401 }
       );
+    }
+
+    // Check if user has logged out since token was issued
+    const tokenIat = session.iat;
+    if (user.lastLogoutAt && tokenIat) {
+      const logoutSec = Math.floor(new Date(user.lastLogoutAt).getTime() / 1000);
+      if (tokenIat < logoutSec) {
+        const response = NextResponse.json(
+          { success: false, message: "Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại." },
+          { status: 401 }
+        );
+        response.cookies.set("auth_token", "", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 0,
+          expires: new Date(0),
+        });
+        return response;
+      }
     }
 
     let teacherDetails = null;

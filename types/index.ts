@@ -17,6 +17,7 @@ export interface IUser {
   avatarUrl?: string;
   isActive: boolean;
   lastLoginAt?: Date | string;
+  lastLogoutAt?: Date | string;
   createdAt: Date | string;
   updatedAt: Date | string;
 }

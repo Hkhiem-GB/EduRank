@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongodb";
 import { User, Teacher, Student, AuditLog } from "@/models";
-import { comparePassword, signToken } from "@/lib/auth";
+import { comparePassword, signToken, TOKEN_MAX_AGE_SECONDS } from "@/lib/auth";
+import { getClientIp, checkRateLimit, createRateLimitExceededResponse } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Rate limiting check (max 10 login attempts per minute per IP to prevent brute-force attacks)
+    const clientIp = getClientIp(req);
+    const rateResult = checkRateLimit(`auth:login:${clientIp}`, 10, 60 * 1000);
+    if (!rateResult.success) {
+      return createRateLimitExceededResponse(rateResult);
+    }
+
     await connectToDatabase();
     const body = await req.json();
     const { accountCode, password } = body;
 
-    if (!accountCode || !password) {
+    if (!accountCode || !password || typeof accountCode !== "string" || typeof password !== "string") {
       return NextResponse.json(
         { success: false, message: "Vui lòng nhập đầy đủ mã tài khoản và mật khẩu." },
         { status: 400 }
@@ -108,13 +116,13 @@ export async function POST(req: NextRequest) {
       user: safeUser,
     });
 
-    // Set HTTP-Only Cookie
+    // Set HTTP-Only Cookie with 3 days expiration (259,200s)
     response.cookies.set("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: TOKEN_MAX_AGE_SECONDS, // 3 days
     });
 
     return response;

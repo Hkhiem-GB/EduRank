@@ -17,7 +17,7 @@ interface SidebarProps {
 export function Sidebar({ isMobileOpen = false, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { activeRole, classes, statistics } = useApp();
+  const { activeRole, classes, statistics, logoutUser } = useApp();
   const [collapsed, setCollapsed] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
@@ -49,10 +49,10 @@ export function Sidebar({ isMobileOpen = false, onCloseMobile }: SidebarProps) {
     }
   };
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setIsLogoutModalOpen(false);
     if (onCloseMobile) onCloseMobile();
-    router.push("/login");
+    await logoutUser();
   };
 
   const sidebarContent = (

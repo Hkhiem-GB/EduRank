@@ -28,7 +28,7 @@ export default function TeacherDashboardPage() {
   const [isScoringModalOpen, setIsScoringModalOpen] = useState(false);
 
   // Link homeroom class to logged-in teacher
-  const currentTeacher = teachers.find((t) => t.teacherCode === currentUser.accountCode);
+  const currentTeacher = teachers.find((t) => t.teacherCode === currentUser?.accountCode);
   const homeroomClass = classes.find((c) => {
     if (currentTeacher?.assignedClassId) {
       return String(c._id) === String(currentTeacher.assignedClassId);
@@ -41,7 +41,7 @@ export default function TeacherDashboardPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        greeting={`Kính chào Thầy/Cô ${currentUser.fullName} 👋`}
+        greeting={`Kính chào Thầy/Cô ${currentUser?.fullName || ""} 👋`}
         title="Bảng Điều Khiển Giáo Viên"
         description="Theo dõi nề nếp thi đua toàn trường và quản lý chuyên sâu lớp chủ nhiệm tại THCS Na Sầm"
         badge={

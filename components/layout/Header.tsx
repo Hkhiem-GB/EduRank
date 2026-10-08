@@ -132,23 +132,23 @@ export function Header({ onToggleSidebar }: HeaderProps) {
             suppressHydrationWarning
           >
             <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white text-blue-700 font-extrabold flex items-center justify-center text-xs sm:text-sm shadow-xs group-hover:scale-105 group-hover:ring-2 group-hover:ring-white/40 transition-all shrink-0 overflow-hidden" suppressHydrationWarning>
-              {currentUser.avatarUrl ? (
+              {currentUser?.avatarUrl ? (
                 <img
                   src={currentUser.avatarUrl}
                   alt={currentUser.fullName}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                currentUser.fullName ? currentUser.fullName.split(" ").slice(-1)[0][0] : "A"
+                currentUser?.fullName ? currentUser.fullName.split(" ").slice(-1)[0][0] : "A"
               )}
             </div>
             <div className="hidden lg:block text-left" suppressHydrationWarning>
               <div className="text-xs font-bold text-white group-hover:text-blue-100 transition-colors flex items-center gap-1">
-                <span>{currentUser.fullName}</span>
+                <span>{currentUser?.fullName || "Tài khoản"}</span>
                 <Icons.ChevronRight className="w-3 h-3 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
               </div>
               <div className="text-[10px] font-semibold text-blue-100/90 flex items-center gap-1">
-                {currentUser.roles?.join(" · ")}
+                {currentUser?.roles?.join(" · ") || "Học sinh"}
               </div>
             </div>
           </Link>
